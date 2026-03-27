@@ -1,18 +1,20 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-let cached: SupabaseClient | null | undefined;
+let cached: SupabaseClient | null = null;
 let warned = false;
 
-function getEnv(name: string): string | null {
-  const v = process.env[name];
-  return v && v.length > 0 ? v : null;
+function normalize(v: string | undefined): string | null {
+  if (!v) return null;
+  const t = v.trim();
+  return t.length > 0 ? t : null;
 }
 
 export function getSupabaseClient(): SupabaseClient | null {
-  if (cached !== undefined) return cached;
+  if (cached) return cached;
 
-  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const anonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  // クライアントバンドルで NEXT_PUBLIC_ を正しく展開させるため、動的キー参照は使わない
+  const url = normalize(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = normalize(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!url || !anonKey) {
     if (!warned) {
@@ -21,8 +23,7 @@ export function getSupabaseClient(): SupabaseClient | null {
         "Supabase環境変数が未設定です。NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY を設定してください。",
       );
     }
-    cached = null;
-    return cached;
+    return null;
   }
 
   cached = createClient(url, anonKey, {
