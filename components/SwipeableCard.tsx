@@ -10,6 +10,7 @@ const SWIPE_THRESHOLD = 120;
 export type SwipeTrivia = {
   id: string;
   content: string;
+  tags?: string[];
   createdAt?: string | null;
 };
 
@@ -47,14 +48,14 @@ export function SwipeableCard({ cards, onSwipe }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative mx-auto h-[420px] w-full max-w-xl [perspective:1600px]">
+      <div className="relative mx-auto aspect-square w-full max-w-[28rem] [perspective:1600px]">
         {next ? (
           <motion.div
             key={`next-${next.id}`}
             initial={{ y: 36, opacity: 0.4, scale: 0.95 }}
             animate={{ y: 20, opacity: 0.8, scale: 0.97 }}
             transition={{ duration: 0.35, ease: "easeOut" }}
-            className="absolute inset-0 rounded-3xl border border-black/5 bg-white/65 shadow-[0_20px_45px_rgba(0,0,0,0.1)] ring-1 ring-black/5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:ring-white/10"
+            className="absolute inset-0 rounded-[2rem] border border-black/5 bg-white/65 shadow-[0_20px_45px_rgba(0,0,0,0.1)] ring-1 ring-black/5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:ring-white/10"
           />
         ) : null}
 
@@ -97,7 +98,7 @@ export function SwipeableCard({ cards, onSwipe }: Props) {
             }}
             className="absolute inset-0 cursor-grab active:cursor-grabbing"
           >
-            <div className="relative h-full rounded-3xl border border-black/5 bg-white/85 p-6 shadow-[0_24px_60px_rgba(0,0,0,0.14)] ring-1 ring-black/5 backdrop-blur dark:border-white/10 dark:bg-zinc-900/80 dark:ring-white/10">
+            <div className="relative h-full rounded-[2rem] border border-black/5 bg-white/85 p-6 shadow-[0_24px_60px_rgba(0,0,0,0.14)] ring-1 ring-black/5 backdrop-blur dark:border-white/10 dark:bg-zinc-900/80 dark:ring-white/10">
               <motion.div
                 style={{ opacity: likeOpacity }}
                 className="absolute left-5 top-5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
@@ -118,6 +119,19 @@ export function SwipeableCard({ cards, onSwipe }: Props) {
                 <p className="my-auto text-xl leading-9 font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-2xl sm:leading-10">
                   {current.content}
                 </p>
+
+                {current.tags && current.tags.length > 0 ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {current.tags.slice(0, 4).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-medium text-indigo-700 dark:text-indigo-300"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
 
                 <div className="mt-auto flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
                   <span>左右にスワイプ</span>

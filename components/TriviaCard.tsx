@@ -7,6 +7,7 @@ export type TriviaCardData = {
   id: string;
   title: string;
   detail: string;
+  tags?: string[];
   createdAt?: string | null;
   sourceTable?: "quizzes" | "trivias" | string;
 };
@@ -27,7 +28,7 @@ export function TriviaCard({ data }: { data: TriviaCardData }) {
       transition={{ type: "spring", stiffness: 420, damping: 30 }}
     >
       <motion.div
-        className="relative h-44 w-full rounded-2xl border border-black/5 bg-white/80 shadow-[0_10px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:ring-white/10"
+        className="relative aspect-square w-full rounded-[1.6rem] border border-black/5 bg-white/80 shadow-[0_10px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:ring-white/10"
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 22 }}
         style={{ transformStyle: "preserve-3d" }}
@@ -51,6 +52,18 @@ export function TriviaCard({ data }: { data: TriviaCardData }) {
           <p className="line-clamp-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
             クリックで裏面（詳細）を表示
           </p>
+          {data.tags && data.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {data.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-[10px] text-indigo-700 dark:text-indigo-300"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           <div className="mt-auto flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
             <span className="truncate">

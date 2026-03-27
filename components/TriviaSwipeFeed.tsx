@@ -5,6 +5,22 @@ import { SwipeableCard, type SwipeTrivia } from "@/components/SwipeableCard";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type TriviaRow = Record<string, unknown>;
+const TAG_PRESETS = ["歴史", "科学", "宇宙", "生物", "地理", "文化", "スポーツ", "IT"] as const;
+
+function normalizeTags(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .filter((v) => v.length > 0);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0);
+  }
+  return [];
+}
 
 function normalizeTrivia(row: TriviaRow): SwipeTrivia | null {
   const idRaw = row.id ?? row.uuid ?? row.trivia_id ?? null;
@@ -29,7 +45,8 @@ function normalizeTrivia(row: TriviaRow): SwipeTrivia | null {
         ? createdAtRaw.toISOString()
         : null;
 
-  return { id, content, createdAt };
+  const tags = normalizeTags(row.tags);
+  return { id, content, createdAt, tags };
 }
 
 export function TriviaSwipeFeed() {
@@ -37,6 +54,8 @@ export function TriviaSwipeFeed() {
   const [connected, setConnected] = useState(true);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
+  const [selectedTag, setSelectedTag] = useState<string>("");
   const [posting, setPosting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -105,25 +124,34 @@ export function TriviaSwipeFeed() {
 
     const content = draft.trim();
     if (!content || posting) return;
+    const inputTags = normalizeTags(tagsInput);
+    const mergedTags = Array.from(new Set([...inputTags, ...(selectedTag ? [selectedTag] : [])]));
+    const tagsPayload = mergedTags.length > 0 ? mergedTags : null;
 
     setPosting(true);
     setMessage(null);
 
     // content カラムを第一候補にし、環境差異に対応するためフォールバックを用意
-    const tryContent = await supabase.from("trivias").insert({ content }).select("*").single();
+    const tryContent = await supabase
+      .from("trivias")
+      .insert({ content, tags: tagsPayload })
+      .select("*")
+      .single();
     if (!tryContent.error) {
       const created = normalizeTrivia(tryContent.data as TriviaRow);
       if (created) {
         setCards((prev) => (prev.some((v) => v.id === created.id) ? prev : [created, ...prev]));
       }
       setDraft("");
+      setTagsInput("");
+      setSelectedTag("");
       setPosting(false);
       return;
     }
 
     const fallback = await supabase
       .from("trivias")
-      .insert({ title: content.slice(0, 32), detail: content })
+      .insert({ title: content.slice(0, 32), detail: content, tags: tagsPayload })
       .select("*")
       .single();
 
@@ -138,6 +166,8 @@ export function TriviaSwipeFeed() {
       setCards((prev) => (prev.some((v) => v.id === created.id) ? prev : [created, ...prev]));
     }
     setDraft("");
+    setTagsInput("");
+    setSelectedTag("");
     setPosting(false);
   }
 
@@ -165,28 +195,57 @@ export function TriviaSwipeFeed() {
 
       <form
         onSubmit={submitQuickPost}
-        className="mt-1 flex items-center gap-2 rounded-2xl border border-black/5 bg-white/75 p-2 ring-1 ring-black/5 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:ring-white/10"
+        className="mt-1 grid gap-3 rounded-3xl border border-black/5 bg-white/80 p-3 ring-1 ring-black/5 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:ring-white/10"
       >
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="今の雑学、面白い！と思ったら一言投稿..."
-          className="h-11 flex-1 rounded-xl border border-black/10 bg-white px-4 text-sm text-zinc-900 outline-none focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/10 dark:border-white/10 dark:bg-black/30 dark:text-zinc-50"
-        />
-        <button
-          type="submit"
-          disabled={!connected || posting || draft.trim().length === 0}
-          className="h-11 shrink-0 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-        >
-          {posting ? "投稿中..." : "投稿"}
-        </button>
+        <div className="flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black/30">
+          <span className="text-zinc-500">💡</span>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="今の雑学、面白い！と思ったら一言投稿..."
+            className="h-10 w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-50"
+          />
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+          <input
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder="タグをカンマ区切りで入力（例: 歴史, 科学）"
+            className="h-10 rounded-xl border border-black/10 bg-white px-3 text-sm text-zinc-900 outline-none focus:border-indigo-500/60 focus:ring-4 focus:ring-indigo-500/10 dark:border-white/10 dark:bg-black/30 dark:text-zinc-50"
+          />
+          <button
+            type="submit"
+            disabled={!connected || posting || draft.trim().length === 0}
+            className="h-10 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          >
+            {posting ? "投稿中..." : "投稿"}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {TAG_PRESETS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setSelectedTag((prev) => (prev === tag ? "" : tag))}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                selectedTag === tag
+                  ? "bg-indigo-600 text-white"
+                  : "border border-black/10 bg-white text-zinc-600 hover:border-indigo-400 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
       </form>
 
       {message ? (
         <p className="text-sm text-zinc-600 dark:text-zinc-300">{message}</p>
       ) : (
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          新しい投稿はリアルタイムでカードの先頭に追加されます。
+          新しい投稿はリアルタイムでカードの先頭に追加されます（tags 対応）。
         </p>
       )}
     </section>
